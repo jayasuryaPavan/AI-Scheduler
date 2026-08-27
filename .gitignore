@@ -1,0 +1,26 @@
+# .NET
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+*.sln.docstates
+
+# Node
+node_modules/
+dist/
+build/
+.npm/
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+
+# macOS/Windows
+.DS_Store
+Thumbs.db
+
+# IDEs
+.idea/
+.vscode/
+*.swp

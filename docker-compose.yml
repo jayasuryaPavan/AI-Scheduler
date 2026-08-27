@@ -1,0 +1,83 @@
+
+# ─────────────────────────────────────────────────────────────
+# AI Manufacturing Scheduler — Local Development Stack
+# Usage:
+#   cp .env.example .env          # set your GEMINI_PROJECT_ID
+#   docker compose up --build
+#   open http://localhost:8080
+# ─────────────────────────────────────────────────────────────
+
+services:
+
+  # ── PostgreSQL 16 ───────────────────────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: ai-scheduler-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ai_scheduler
+      POSTGRES_USER:     scheduler
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-scheduler_dev_pass}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Mount init.sql — runs only on first container creation
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test:     ["CMD-SHELL", "pg_isready -U scheduler -d ai_scheduler"]
+      interval: 5s
+      timeout:  5s
+      retries:  15
+
+  # ── .NET + Vue Application ───────────────────────────────────
+  app:
+    build:
+      context:    .
+      dockerfile: Dockerfile
+    container_name: ai-scheduler-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # Database
+      ConnectionStrings__DefaultConnection: >-
+        Host=postgres;Port=5432;Database=ai_scheduler;
+        Username=scheduler;Password=${DB_PASSWORD:-scheduler_dev_pass};
+        Include Error Detail=true
+
+      # Gemini / Vertex AI
+      Gemini__ProjectId: ${GEMINI_PROJECT_ID}
+      Gemini__Location:  ${GEMINI_LOCATION:-us-central1}
+      Gemini__ModelId:   ${GEMINI_MODEL_ID:-gemini-3.5-flash}
+
+      # Runtime
+      ASPNETCORE_ENVIRONMENT: Production
+      PORT:                   8080
+
+      # Google Application Default Credentials
+      # Option A (recommended for local): mount gcloud ADC file
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/gcp-adc
+    secrets:
+      - gcp-adc
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:     ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      interval: 15s
+      timeout:  5s
+      retries:  5
+
+# ── Volumes ─────────────────────────────────────────────────
+volumes:
+  postgres_data:
+    driver: local
+
+# ── Secrets (Google ADC for Vertex AI) ──────────────────────
+# The gcp-adc secret maps your local ADC file into the container.
+# Run:  gcloud auth application-default login
+# Then the file is at ~/.config/gcloud/application_default_credentials.json
+secrets:
+  gcp-adc:
+    file: ${GCP_ADC_PATH:-~/.config/gcloud/application_default_credentials.json}

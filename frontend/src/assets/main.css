@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { @apply scroll-smooth; }
+
+  body {
+    @apply bg-slate-50 text-slate-900 font-sans antialiased;
+    min-height: 100vh;
+  }
+
+  /* Thin scrollbar for the light theme */
+  ::-webkit-scrollbar             { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track       { @apply bg-slate-100; }
+  ::-webkit-scrollbar-thumb       { @apply bg-slate-300 rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-slate-400; }
+}
+
+@layer components {
+  /* Clean, flat white cards with subtle borders and shadows */
+  .glass-card {
+    @apply bg-white border border-slate-200 shadow-sm rounded-xl;
+  }
+
+  /* Compact status pill badge */
+  .status-badge {
+    @apply px-2 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider border;
+  }
+
+  /* Interactive button base */
+  .btn {
+    @apply px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200
+           flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed
+           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white;
+  }
+
+  /* Pulsing status dot */
+  .status-dot {
+    @apply w-2 h-2 rounded-full flex-shrink-0;
+  }
+
+  /* Pane section header */
+  .pane-header {
+    @apply px-4 py-3 border-b border-slate-200 flex items-center gap-2 flex-shrink-0 bg-white rounded-t-xl;
+  }
+
+  /* Pane scrollable body */
+  .pane-body {
+    @apply flex-1 overflow-y-auto p-3 space-y-2 bg-slate-50/30;
+  }
+}
+
+/* ─── Animations ──────────────────────────────────────────── */
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 4px currentColor; }
+  50%       { opacity: 0.5; box-shadow: none; }
+}
+
+@keyframes slide-in-up {
+  from { transform: translateY(8px); opacity: 0; }
+  to   { transform: translateY(0);   opacity: 1; }
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(110%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+@keyframes shrink-width {
+  from { width: 100%; }
+  to   { width: 0%;   }
+}
+
+@keyframes fade-scale-in {
+  from { transform: scale(0.96); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+.animate-glow-pulse { animation: glow-pulse 2s ease-in-out infinite; }
+
+/* Vue transition helpers used in components */
+.list-move,
+.list-enter-active,
+.list-leave-active   { transition: all 0.45s cubic-bezier(0.4, 0, 0.2, 1); }
+.list-enter-from     { opacity: 0; transform: translateY(-16px); }
+.list-leave-to       { opacity: 0; transform: translateY(16px);  }
+.list-leave-active   { position: absolute; width: 100%; }
+
+.expand-enter-active,
+.expand-leave-active { transition: all 0.25s ease; overflow: hidden; }
+.expand-enter-from,
+.expand-leave-to     { max-height: 0; opacity: 0; }
+.expand-enter-to,
+.expand-leave-from   { max-height: 800px; opacity: 1; }
+
+.toast-enter-active { animation: slide-in-right 0.32s cubic-bezier(0.16, 1, 0.3, 1); }
+.toast-leave-active { transition: all 0.2s ease-in; }
+.toast-leave-to     { opacity: 0; transform: translateX(20px); }

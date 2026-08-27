@@ -1,0 +1,33 @@
+# .NET artifacts
+**/bin/
+**/obj/
+**/*.user
+**/.vs/
+**/.vscode/
+backend/wwwroot/
+
+# Node
+**/node_modules/
+frontend/dist/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Environment / secrets
+**/.env
+**/.env.*
+!**/.env.example
+**/application_default_credentials.json
+
+# Docker
+.dockerignore
+
+# OS
+**/.DS_Store
+**/Thumbs.db
+
+# Misc
+**/*.md
+**/LICENSE
