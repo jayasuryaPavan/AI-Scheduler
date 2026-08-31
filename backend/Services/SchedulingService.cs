@@ -615,6 +615,8 @@ public class SchedulingService : ISchedulingService
         var previousStatus = po.Status;
         po.Status = status;
 
+        if (status.Length > 20) status = status.Substring(0, 20);
+
         if (delayDays > 0)
         {
             po.ExpectedDeliveryDate = po.ExpectedDeliveryDate.AddDays(delayDays);
@@ -662,6 +664,7 @@ public class SchedulingService : ISchedulingService
 
         var wc = matches.First();
         var previousStatus = wc.Status;
+        if (status.Length > 20) status = status.Substring(0, 20);
         wc.Status = status;
         await _db.SaveChangesAsync();
 
@@ -881,6 +884,9 @@ public class SchedulingService : ISchedulingService
 
         try 
         {
+            if (_db.Database.CurrentTransaction != null)
+                await _db.Database.CurrentTransaction.CreateSavepointAsync("raw_sql_sp");
+
             if (sql.TrimStart().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
             {
                 using var reader = await cmd.ExecuteReaderAsync();
@@ -895,16 +901,27 @@ public class SchedulingService : ISchedulingService
                     }
                     results.Add(row);
                 }
+                
+                if (_db.Database.CurrentTransaction != null)
+                    await _db.Database.CurrentTransaction.ReleaseSavepointAsync("raw_sql_sp");
+                    
                 return System.Text.Json.JsonSerializer.Serialize(results, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
             }
             else
             {
                 int affected = await cmd.ExecuteNonQueryAsync();
+                
+                if (_db.Database.CurrentTransaction != null)
+                    await _db.Database.CurrentTransaction.ReleaseSavepointAsync("raw_sql_sp");
+                    
                 return $"{affected} rows affected.";
             }
         }
         catch (Exception ex)
         {
+            if (_db.Database.CurrentTransaction != null)
+                await _db.Database.CurrentTransaction.RollbackToSavepointAsync("raw_sql_sp");
+                
             return $"Error executing SQL: {ex.Message}";
         }
     }

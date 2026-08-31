@@ -97,6 +97,9 @@ public class AgentMemoryService : IAgentMemoryService
             using var cmd = conn.CreateCommand();
             if (_db.Database.CurrentTransaction != null)
                 cmd.Transaction = _db.Database.CurrentTransaction.GetDbTransaction();
+
+            if (_db.Database.CurrentTransaction != null)
+                await _db.Database.CurrentTransaction.CreateSavepointAsync("agent_mem_sp");
                 
             cmd.CommandText = """
                 SELECT "MemoryText", "CreatedAt",
@@ -128,10 +131,16 @@ public class AgentMemoryService : IAgentMemoryService
                 });
             }
 
+            if (_db.Database.CurrentTransaction != null)
+                await _db.Database.CurrentTransaction.ReleaseSavepointAsync("agent_mem_sp");
+
             return hits;
         }
         catch (Exception ex)
         {
+            if (_db.Database.CurrentTransaction != null)
+                await _db.Database.CurrentTransaction.RollbackToSavepointAsync("agent_mem_sp");
+
             _logger.LogWarning(ex, "Failed to retrieve relevant agent memories");
             return new List<AgentMemoryHit>();
         }

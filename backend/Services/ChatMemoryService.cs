@@ -134,6 +134,9 @@ public class ChatMemoryService : IChatMemoryService
             using var cmd = conn.CreateCommand();
             if (_db.Database.CurrentTransaction != null)
                 cmd.Transaction = _db.Database.CurrentTransaction.GetDbTransaction();
+
+            if (_db.Database.CurrentTransaction != null)
+                await _db.Database.CurrentTransaction.CreateSavepointAsync("chat_mem_sp");
                 
             cmd.CommandText = """
                 SELECT "Role", "Content", "ToolCalls", "CreatedAt",
@@ -167,11 +170,17 @@ public class ChatMemoryService : IChatMemoryService
                 });
             }
 
+            if (_db.Database.CurrentTransaction != null)
+                await _db.Database.CurrentTransaction.ReleaseSavepointAsync("chat_mem_sp");
+
             _logger.LogDebug("Retrieved {Count} similar messages from chat memory", hits.Count);
             return hits;
         }
         catch (Exception ex)
         {
+            if (_db.Database.CurrentTransaction != null)
+                await _db.Database.CurrentTransaction.RollbackToSavepointAsync("chat_mem_sp");
+
             _logger.LogWarning(ex, "Failed to retrieve similar chat messages — returning empty");
             return new List<ChatMemoryHit>();
         }
