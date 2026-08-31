@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Google.Cloud.AIPlatform.V1;
 using Google.Protobuf.WellKnownTypes;
 using AiScheduler.Api.Data;
@@ -17,9 +17,9 @@ namespace AiScheduler.Api.Agent;
 /// text response (no more tool calls).
 ///
 /// Tools:
-///   1. assess_material_availability   → cross-references BOM vs inventory + POs
-///   2. evaluate_work_center_capacity  → checks machine status + capacity load
-///   3. execute_schedule_adjustment    → blocks/promotes WOs and commits to DB
+///   1. assess_material_availability   â†’ cross-references BOM vs inventory + POs
+///   2. evaluate_work_center_capacity  â†’ checks machine status + capacity load
+///   3. execute_schedule_adjustment    â†’ blocks/promotes WOs and commits to DB
 /// </summary>
 public sealed class MasterProductionSchedulerAgent
 {
@@ -46,7 +46,7 @@ public sealed class MasterProductionSchedulerAgent
         - Work Orders (Jobs) are sequenced by Priority (1 = highest). Lower priority fills capacity gaps.
         - A Work Order is BLOCKED when: (a) required materials are on a DELAYED Purchase Order with zero
           on-hand stock, OR (b) a required Work Center is DOWN.
-        - Operations within a Work Order must be executed in ascending OperationSequence order (10 → 20 → 30).
+        - Operations within a Work Order must be executed in ascending OperationSequence order (10 â†’ 20 â†’ 30).
         - When disruptions occur, immediately assess impact, block infeasible Work Orders, and promote the
           next viable candidates to fill the schedule.
 
@@ -123,12 +123,12 @@ public sealed class MasterProductionSchedulerAgent
             Endpoint = $"{location}-aiplatform.googleapis.com"
         }.Build();
 
-        _logger.LogInformation("Agent initialized — model: {Model}", _modelName);
+        _logger.LogInformation("Agent initialized â€” model: {Model}", _modelName);
     }
 
-    // ─────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Public entry point
-    // ─────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     public async Task<AgentRunResult> RunAsync(string? triggerMessage = null, string? sessionId = null)
     {
@@ -146,7 +146,7 @@ public sealed class MasterProductionSchedulerAgent
         var strategy = _db.Database.CreateExecutionStrategy();
         await strategy.ExecuteAsync(async () =>
         {
-            // ── Open a transaction so ALL tool changes can be rolled back ──
+            // â”€â”€ Open a transaction so ALL tool changes can be rolled back â”€â”€
             await using var transaction = await _db.Database.BeginTransactionAsync();
 
             try
@@ -163,7 +163,7 @@ public sealed class MasterProductionSchedulerAgent
                     Parts = { new Part { Text = userPrompt } }
                 });
 
-                // ── Retrieve relevant past conversations for memory ────────
+                // â”€â”€ Retrieve relevant past conversations for memory â”€â”€â”€â”€â”€â”€â”€â”€
                 string memoryContext = "";
                 if (!string.IsNullOrWhiteSpace(triggerMessage))
                 {
@@ -181,11 +181,11 @@ public sealed class MasterProductionSchedulerAgent
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, "Failed to retrieve chat memory — proceeding without context");
+                        _logger.LogWarning(ex, "Failed to retrieve chat memory â€” proceeding without context");
                     }
                 }
 
-                // ── Retrieve relevant agent preferences (long term memory) ─
+                // â”€â”€ Retrieve relevant agent preferences (long term memory) â”€
                 string agentMemoryContext = "";
                 if (!string.IsNullOrWhiteSpace(triggerMessage))
                 {
@@ -206,7 +206,7 @@ public sealed class MasterProductionSchedulerAgent
                     }
                 }
 
-                // ── Agentic reasoning loop ────────────────────────────────
+                // â”€â”€ Agentic reasoning loop â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 for (int iteration = 0; iteration < MaxIterations; iteration++)
                 {
                     _logger.LogDebug("Agent iteration {Iteration}/{Max}", iteration + 1, MaxIterations);
@@ -263,7 +263,7 @@ public sealed class MasterProductionSchedulerAgent
                         var fc       = fcPart.FunctionCall;
                         var toolName = fc.Name;
 
-                        _logger.LogInformation("Agent → tool call: {Tool}", toolName);
+                        _logger.LogInformation("Agent â†’ tool call: {Tool}", toolName);
                         runResult.ToolCalls.Add(toolName);
 
                         object toolResult = await DispatchToolAsync(toolName, fc);
@@ -311,12 +311,12 @@ public sealed class MasterProductionSchedulerAgent
                 runResult.CompletedAt = DateTimeOffset.UtcNow;
             }
 
-            // ── ROLLBACK — nothing is committed to the live DB ──────────
+            // â”€â”€ ROLLBACK â€” nothing is committed to the live DB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             await transaction.RollbackAsync();
             _logger.LogInformation("Sandbox transaction rolled back. {ImpactCount} simulated impacts captured.", simulatedImpact.Count);
         });
 
-        // ── If any mutation tools were called, store as a proposal ───
+        // â”€â”€ If any mutation tools were called, store as a proposal â”€â”€â”€
         bool hasMutations = runResult.ToolCalls.Any(t =>
             t is "execute_schedule_adjustment" or "update_purchase_order_status"
                or "update_work_center_status" or "update_work_order_priority"
@@ -339,7 +339,7 @@ public sealed class MasterProductionSchedulerAgent
             _logger.LogInformation("Proposal {Id} saved for human approval.", proposalId);
         }
 
-        // ── Store conversation in chat memory ───────────────────────
+        // â”€â”€ Store conversation in chat memory â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if (!string.IsNullOrWhiteSpace(sessionId) && !string.IsNullOrWhiteSpace(triggerMessage))
         {
             try
@@ -368,7 +368,7 @@ public sealed class MasterProductionSchedulerAgent
 
     /// <summary>
     /// Deterministically replays the agent's tool calls against the live database
-    /// after human approval. No LLM call needed — we just re-execute the same tools.
+    /// after human approval. No LLM call needed â€” we just re-execute the same tools.
     /// </summary>
     public async Task<AgentRunResult> ReplayAsync(string proposalId)
     {
@@ -377,7 +377,7 @@ public sealed class MasterProductionSchedulerAgent
 
         _logger.LogInformation("Replaying approved proposal {Id}: {Prompt}", proposalId, proposal.UserPrompt);
 
-        // Re-run the agent with the original prompt — this time WITHOUT a transaction wrapper,
+        // Re-run the agent with the original prompt â€” this time WITHOUT a transaction wrapper,
         // so changes commit to the live database.
         var replayResult = await RunDirectAsync(proposal.UserPrompt);
 
@@ -414,7 +414,7 @@ public sealed class MasterProductionSchedulerAgent
                 Parts = { new Part { Text = userPrompt } }
             });
 
-            // ── Retrieve relevant agent preferences (long term memory) ─
+            // â”€â”€ Retrieve relevant agent preferences (long term memory) â”€
             string agentMemoryContext = "";
             if (!string.IsNullOrWhiteSpace(triggerMessage))
             {
@@ -473,7 +473,7 @@ public sealed class MasterProductionSchedulerAgent
                 foreach (var fcPart in functionCallParts)
                 {
                     var fc = fcPart.FunctionCall;
-                    _logger.LogInformation("Agent → tool call: {Tool}", fc.Name);
+                    _logger.LogInformation("Agent â†’ tool call: {Tool}", fc.Name);
                     runResult.ToolCalls.Add(fc.Name);
 
                     object toolResult = await DispatchToolAsync(fc.Name, fc);
@@ -509,9 +509,9 @@ public sealed class MasterProductionSchedulerAgent
         return runResult;
     }
 
-    // ─────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Tool definitions (ADK-style function declarations)
-    // ─────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private static Tool BuildToolDeclarations()
     {
@@ -550,13 +550,13 @@ public sealed class MasterProductionSchedulerAgent
                 "to fill capacity gaps. Commits all changes to the database atomically."
         });
 
-        // ── Chat-driven mutation tools ─────────────────────
+        // â”€â”€ Chat-driven mutation tools â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         var woUpdateParams = new OpenApiSchema { Type = Google.Cloud.AIPlatform.V1.Type.Object };
         woUpdateParams.Properties.Add("description", new OpenApiSchema
         {
             Type        = Google.Cloud.AIPlatform.V1.Type.String,
-            Description = "A keyword or phrase describing the Work Order product name or order number (e.g. 'pilot basic', 'parker')."
+            Description = "A keyword or phrase describing the Work Order product name or order number (e.g. 'delta basic', 'alpha')."
         });
         woUpdateParams.Properties.Add("priority", new OpenApiSchema
         {
@@ -647,9 +647,9 @@ public sealed class MasterProductionSchedulerAgent
         return tool;
     }
 
-    // ─────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Tool dispatcher
-    // ─────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private async Task<object> DispatchToolAsync(string toolName, FunctionCall fc) => toolName switch
     {
@@ -678,9 +678,9 @@ public sealed class MasterProductionSchedulerAgent
         return new { Success = true, Message = "Preference stored successfully." };
     }
 
-    // ─────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Helpers
-    // ─────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private static Struct SerializeToStruct(object obj)
     {
@@ -697,3 +697,4 @@ public sealed class MasterProductionSchedulerAgent
         return Struct.Parser.ParseJson(json);
     }
 }
+

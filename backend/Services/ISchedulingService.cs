@@ -44,4 +44,5 @@ public interface ISchedulingService
     // ── External APIs (Mock) ──────────────────────────────────
     Task<string> CheckShipmentTrackingAsync(string trackingNumberOrDescription);
     Task<string> CheckWeatherForecastAsync(string location);
+    Task<string> SendSupplierEmailAsync(string supplierName, string partNumber, int quantity, string urgency, string messageBody);
 }

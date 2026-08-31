@@ -23,6 +23,9 @@ public class ProcurementAgent
         1. Use your tools to evaluate the request. For example, check weather or tracking APIs if there is a logistics question.
         2. Reply with a clear, concise summary of your findings (e.g., "PO 123 is delayed due to a storm in Miami").
         3. Do NOT make broad schedule adjustments; that is the CEO's job.
+        
+        When inventory drops low or when instructed to order parts:
+        1. Use the `email_supplier` tool to draft and send an email to the supplier requesting the parts.
         """;
 
     public ProcurementAgent(
@@ -159,6 +162,21 @@ public class ProcurementAgent
             Parameters = weatherParams
         });
         
+        var emailParams = new OpenApiSchema { Type = Google.Cloud.AIPlatform.V1.Type.Object };
+        emailParams.Properties.Add("supplier_name", new OpenApiSchema { Type = Google.Cloud.AIPlatform.V1.Type.String });
+        emailParams.Properties.Add("part_number", new OpenApiSchema { Type = Google.Cloud.AIPlatform.V1.Type.String });
+        emailParams.Properties.Add("quantity", new OpenApiSchema { Type = Google.Cloud.AIPlatform.V1.Type.Integer });
+        emailParams.Properties.Add("urgency", new OpenApiSchema { Type = Google.Cloud.AIPlatform.V1.Type.String, Description = "e.g., Normal, High, Critical" });
+        emailParams.Properties.Add("message_body", new OpenApiSchema { Type = Google.Cloud.AIPlatform.V1.Type.String, Description = "The drafted email body" });
+        emailParams.Required.Add("supplier_name"); emailParams.Required.Add("part_number"); emailParams.Required.Add("quantity"); emailParams.Required.Add("urgency"); emailParams.Required.Add("message_body");
+
+        tool.FunctionDeclarations.Add(new FunctionDeclaration
+        {
+            Name = "email_supplier",
+            Description = "Drafts and sends an email to a supplier to request parts.",
+            Parameters = emailParams
+        });
+        
         return tool;
     }
 
@@ -173,6 +191,12 @@ public class ProcurementAgent
             fc.Args.Fields.TryGetValue("tracking_number_or_description", out var track) ? track.StringValue : "") },
         "check_weather_forecast" => new { Forecast = await _schedulingService.CheckWeatherForecastAsync(
             fc.Args.Fields.TryGetValue("location", out var loc) ? loc.StringValue : "") },
+        "email_supplier" => new { Status = await _schedulingService.SendSupplierEmailAsync(
+            fc.Args.Fields.TryGetValue("supplier_name", out var sname) ? sname.StringValue : "",
+            fc.Args.Fields.TryGetValue("part_number", out var pnum) ? pnum.StringValue : "",
+            fc.Args.Fields.TryGetValue("quantity", out var qty) ? (int)qty.NumberValue : 0,
+            fc.Args.Fields.TryGetValue("urgency", out var urg) ? urg.StringValue : "Normal",
+            fc.Args.Fields.TryGetValue("message_body", out var body) ? body.StringValue : "") },
         _ => throw new InvalidOperationException($"Unknown tool: '{toolName}'")
     };
 

@@ -1020,4 +1020,17 @@ public class SchedulingService : ISchedulingService
         
         return "Clear skies. No weather disruptions expected.";
     }
+
+    public async Task<string> SendSupplierEmailAsync(string supplierName, string partNumber, int quantity, string urgency, string messageBody)
+    {
+        await Task.Delay(500); // Simulate network latency
+        
+        _logger.LogInformation("--- SIMULATED EMAIL DISPATCH ---");
+        _logger.LogInformation("To: {Supplier}", supplierName);
+        _logger.LogInformation("Subject: URGENT ({Urgency}): Request for {Quantity}x {PartNumber}", urgency, quantity, partNumber);
+        _logger.LogInformation("Body: \n{Message}", messageBody);
+        _logger.LogInformation("----------------------------------");
+        
+        return $"Email successfully sent to {supplierName} requesting {quantity} units of {partNumber}.";
+    }
 }
