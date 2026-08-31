@@ -57,7 +57,7 @@ onUnmounted(() => {
 })
 
 function connectToProactiveStream() {
-  eventSource = new EventSource('http://localhost:5000/api/agent/stream')
+  eventSource = new EventSource('/api/agent/stream')
   
   eventSource.onmessage = (event) => {
     try {

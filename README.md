@@ -127,29 +127,27 @@ npm run dev
 
 ---
 
-## Simulation Demo
+## Testing Instructions
 
-The dashboard ships with a pre-configured disruption scenario:
+The AI Manufacturing Scheduler is designed to be tested entirely through the **AI Copilot** natural language chat interface. 
 
-| Entity | Situation |
-|--------|-----------|
-| `PO-003` (PCB-CTRL) | Already marked **Delayed** in seed data |
-| `WO-2026-003` (SKU-CTRL-C) | Requires PCB-CTRL → will be **Blocked** by agent |
-| `WO-2026-001` (SKU-PUMP-A) | In-Progress, materials available |
+To test the core capabilities, open the application in your browser and use the AI Copilot on the right side of the screen to trigger these two scenarios:
 
-### Button Walkthrough
+### Scenario 1: Shipper Delay (Email Integration)
+Simulate an incoming email from a supplier regarding a delayed component.
+1. Open the AI Copilot chat.
+2. Type: *"I just received an email from PlasticsGrp. Due to customs issues, our shipment of Molded Plastic Casings (PLAST-CSG) is delayed by 5 days. Please update the schedule."*
+3. Watch as the agent parses the text, checks material availability, and **blocks/delays** all Work Orders dependent on the `PLAST-CSG` purchase order.
+4. Click **Approve** to commit the changes to the live schedule.
 
-1. **🚨 Simulate PO Delay** → Marks PO-003 as `Delayed` → agent runs →
-   - `assess_material_availability` — detects PCB-CTRL shortage
-   - `evaluate_work_center_capacity` — checks all machine status
-   - `execute_schedule_adjustment` — **blocks WO-2026-003**, promotes WO-2026-004 to fill the gap
-   - Toast shows agent's natural-language reasoning
+### Scenario 2: Machine Breakdown
+Simulate a real-time hardware failure on the plant floor.
+1. In the AI Copilot, type: *"The Casing Assembly Station just broke down unexpectedly."*
+2. Watch as the agent evaluates capacity and instantly **blocks** all operations dependent on that machine.
+3. Click **Approve**.
+4. To resolve it, type: *"Maintenance just finished. The Casing Assembly Station is back online and running perfectly."* The agent will restore the schedule.
 
-2. **🔧 Machine Breakdown** → Marks CNC Milling Station as `Down` → agent runs →
-   - Blocks WO-2026-002 and WO-2026-004 (both need CNC for Op-10)
-   - Toast shows which jobs were impacted
-
-3. **↺ Reset** → Restores all statuses to initial seed state for re-demo
+*(Note: You can reset the database by restarting the postgres container, which will re-run `init.sql`).*
 
 ---
 
